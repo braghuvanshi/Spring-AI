@@ -4,9 +4,6 @@ import com.llm.dto.UserInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +12,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,16 +32,10 @@ public class TravelAssistantController {
     public String prompts(@RequestBody UserInput userInput) {
         log.info("userInput : {} ", userInput);
 
-        var promptMessage = new Prompt(
-                List.of(
-                        new UserMessage(userInput.prompt())
-                )
-        );
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .user(userInput.prompt())
+                .call()
+                .content();
     }
 
     @PostMapping("/v2/travel_assistant")
@@ -59,19 +49,13 @@ public class TravelAssistantController {
                 """;
 
         PromptTemplate promptTemplate = new PromptTemplate(travelPromptMessage);
-        var message = promptTemplate.createMessage(Map.of("context", userInput.context(), "input", userInput.prompt()));
+        String userPrompt = promptTemplate.render(Map.of("context", userInput.context(), "input", userInput.prompt()));
 
-        var promptMessage = new Prompt(
-                new SystemMessage(systemMessage), // Sets the role
-                message
-                );
-
-        log.info("promptMessage : {} ", promptMessage);
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .system(systemMessage)
+                .user(userPrompt)
+                .call()
+                .content();
     }
 
 }

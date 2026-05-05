@@ -7,11 +7,13 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class PromptController {
@@ -33,17 +35,17 @@ public class PromptController {
     @PostMapping("/v1/prompts")
     public String prompts(@RequestBody UserInput userInput){
         log.info("userInput : {} ", userInput);
-        var systemMessage = """
-                You are a helpful assistant, who can answer java based questions.
-                For any other questions, please respond with I don't know in a funny way!
-                """;
+//        var systemMessage = """
+//                You are a helpful assistant, who can answer java based questions.
+//                For any other questions, please respond with I don't know in a funny way!
+//                """;
         var sysMessage = new SystemMessage(systemTemplateMessage);
         var userMessage = new UserMessage(userInput.prompt());
 
         var promptMessage = new Prompt(List.of(sysMessage,
 //                new UserMessage("Whats My name ?"),
 //                new AssistantMessage("I don't know!"),
-//                new UserMessage("My name is Dilip"),
+//                new UserMessage("My name is Bhawna"),
                 userMessage));
 
         var responseSpec = chatClient.prompt(promptMessage).call();
@@ -51,7 +53,44 @@ public class PromptController {
 
     }
 
+    @PostMapping("/v1/prompts/{language}")
+    public String promptsByLanguage(
+            @PathVariable String language,
+            @RequestBody UserInput userInput)
+    {
+        log.info("userInput : {},  language : {} ", userInput , language);
+        var systemPromptTemplate = new SystemPromptTemplate(systemText);
+        var sysMessage =systemPromptTemplate.createMessage(Map.of("language", language));
+        log.info("sysMessage : {} ", sysMessage);
+        var userMessage= new UserMessage((userInput.prompt()));
+        var promptMessage = new Prompt(List.of(sysMessage,
+                userMessage));
 
+        var responseSpec = chatClient.prompt(promptMessage).call();
+        return responseSpec.content();
+
+    }
+
+    @PostMapping("v2/prompts/{language}")
+    public Object promptByLanguageV2(
+            @PathVariable String language,
+            @RequestBody UserInput userInput) {
+        log.info("UserInput message : {}", userInput);
+
+        var requestSpec = chatClient
+                .prompt()
+                .user(userInput.prompt())
+                .system(promptSystemSpec ->
+                        promptSystemSpec.text(systemText)
+                                .param("language", language));
+
+        log.info("requestSpec : {}", requestSpec);
+        var responseSpec = requestSpec.call();
+        log.info("responseSpec : {}", responseSpec);
+        log.info("content : {}", responseSpec.content());
+
+        return responseSpec.content();
+    }
 
 
 }

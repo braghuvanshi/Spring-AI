@@ -4,9 +4,6 @@ import com.llm.dto.UserInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -16,7 +13,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,16 +40,10 @@ public class PromptTypesController {
     public String zeroShot(@RequestBody UserInput userInput) {
         log.info("userInput : {} ", userInput);
 
-        var promptMessage = new Prompt(
-                List.of(
-                        new UserMessage(userInput.prompt())
-                )
-        );
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .user(userInput.prompt())
+                .call()
+                .content();
     }
 
     //   happy
@@ -79,35 +69,23 @@ public class PromptTypesController {
                 """;
 
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(fewShotPrompt);
-        var systemMessage = systemPromptTemplate.createMessage((Map.of("few_shot_prompts", fewShotExamples)));
-        var promptMessage = new Prompt(
-                List.of(
-                        systemMessage,
-                        new UserMessage(userInput.prompt())
-                )
-        );
+        String systemPrompt = systemPromptTemplate.render(Map.of("few_shot_prompts", fewShotExamples));
 
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .system(systemPrompt)
+                .user(userInput.prompt())
+                .call()
+                .content();
     }
 
     @PostMapping("/v1/prompt_types/cot")
     public String cot(@RequestBody UserInput userInput) {
         log.info("userInput : {} ", userInput);
 
-        var promptMessage = new Prompt(
-                List.of(
-                        new UserMessage(userInput.prompt())
-                )
-        );
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .user(userInput.prompt())
+                .call()
+                .content();
     }
 
     @PostMapping("/v1/prompt_types/multi_step")
@@ -115,15 +93,12 @@ public class PromptTypesController {
         log.info("userInput : {} ", userInput);
 //        PromptTemplate promptTemplate = new PromptTemplate(multiStep1);
         PromptTemplate promptTemplate = new PromptTemplate(multiStep2);
-        var message = promptTemplate.createMessage(Map.of("input", userInput.prompt()));
-        log.info("prompt : {} ",message.getText());
-        var promptMessage = new Prompt(
-                List.of(message)
-        );
-        var requestSpec = chatClient.prompt(promptMessage);
+        String userPrompt = promptTemplate.render(Map.of("input", userInput.prompt()));
+        log.info("prompt : {} ", userPrompt);
 
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .user(userPrompt)
+                .call()
+                .content();
     }
 }

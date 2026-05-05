@@ -111,10 +111,10 @@ public class CustomAdvisor implements CallAdvisor {
         //        // 1. Capture start time for performance tracking
         Instant startTime = Instant.now();
 
-        var modifiedRequest = enhanceRequest(chatClientRequest);
+        var modifiedRequest = enhanceRequest(chatClientRequest); //Modifying the original request to add a timestamp
         log.info("Modified request: {}", modifiedRequest);
-        var originalResponse =  callAdvisorChain.nextCall(chatClientRequest);
+        var originalResponse =  callAdvisorChain.nextCall(chatClientRequest); //forwarding the call to LLM
         Duration processingTime = Duration.between(startTime, Instant.now());
-        return Objects.requireNonNull(enhanceResponse(originalResponse, processingTime));
+        return Objects.requireNonNull(enhanceResponse(originalResponse, processingTime)); //Modifying the original response to add processing time metadata
     }
 }
