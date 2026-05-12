@@ -1,6 +1,7 @@
 package com.llm.tool_calling;
 
 import com.llm.dto.UserInput;
+import com.llm.tool_calling.currenttime.DateTimeTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -11,6 +12,8 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -32,9 +35,10 @@ public class ToolCallingController {
     @PostMapping("/v1/tool_calling")
     public String toolCalling(@RequestBody UserInput userInput) {
 
-
+        var tools = ToolCallbacks.from(new DateTimeTools());
         return chatClient.prompt()
                 .user(userInput.prompt())
+                .toolCallbacks(tools)
                 .call()
                 .content();
     }

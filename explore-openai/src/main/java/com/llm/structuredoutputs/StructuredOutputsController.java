@@ -9,8 +9,6 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.ai.converter.MapOutputConverter;
@@ -52,15 +50,11 @@ public class StructuredOutputsController {
     public String structuredOutputs(@RequestBody @Valid UserInput userInput) {
 
         log.info("userInput message : {} ", userInput);
-        var message = new UserMessage(userInput.prompt());
-        var promptMessage = new Prompt(List.of(message));
 
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        log.info("requestSpec : {} ", requestSpec);
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .user(userInput.prompt())
+                .call()
+                .content();
     }
 
     @PostMapping("/v1/structured_outputs/fewshot")
@@ -69,17 +63,13 @@ public class StructuredOutputsController {
         log.info("userInput message : {} ", userInput);
 
         var promptTemplate = new PromptTemplate(flightBookingFewShot);
-        var message = promptTemplate.createMessage(Map.of("input", userInput.prompt(),
+        String userPrompt = promptTemplate.render(Map.of("input", userInput.prompt(),
                 "jsonexample" , CommonUtils.flightJson()));
 
-        var promptMessage = new Prompt(List.of(message));
-
-        var requestSpec = chatClient.prompt(promptMessage);
-
-        log.info("requestSpec : {} ", requestSpec);
-        var responseSpec = requestSpec.call();
-        log.info("responseSpec : {} ", responseSpec.chatResponse());
-        return responseSpec.content();
+        return chatClient.prompt()
+                .user(userPrompt)
+                .call()
+                .content();
     }
 
     @PostMapping("/v1/structured_outputs/entity")
@@ -88,13 +78,11 @@ public class StructuredOutputsController {
         log.info("userInput message : {} ", userInput);
 
         var promptTemplate = new PromptTemplate(flightBooking);
-        var message = promptTemplate.
-                createMessage(Map.of("input", userInput.prompt()));
-
-        var promptMessage = new Prompt(List.of(message));
+        String userPrompt = promptTemplate.render(Map.of("input", userInput.prompt()));
 
         var booking = chatClient
-                .prompt(promptMessage)
+                .prompt()
+                .user(userPrompt)
                 .call()
                 .entity(FlightBooking.class);
 
@@ -107,11 +95,9 @@ public class StructuredOutputsController {
 
         log.info("userInput message : {} ", userInput);
 
-        var message = new UserMessage(userInput.prompt());
-        var promptMessage = new Prompt(List.of(message));
-
         var soccerTeams = chatClient
-                .prompt(promptMessage)
+                .prompt()
+                .user(userInput.prompt())
                 .call()
                 //.entity(new ParameterizedTypeReference<List<SoccerTeam>>() {});
                 .entity(new ListOutputConverter(new DefaultConversionService()));
@@ -130,20 +116,18 @@ public class StructuredOutputsController {
 
         String format = mapOutputConverter.getFormat();
         String template = """
-        Inpuut : {input}
+        Input : {input}
         {format}
         """;
         var promptTemplate = new PromptTemplate(template);
-        var message = promptTemplate.createMessage(
+        String userPrompt = promptTemplate.render(
                 Map.of("input", userInput.prompt(), "format", format));
 
-        var promptMessage = new Prompt(List.of(message));
-
-        log.info("promptMessage : {} ", promptMessage);
-
+        log.info("userPrompt : {} ", userPrompt);
 
         var soccerTeamsByMap = chatClient
-                .prompt(promptMessage)
+                .prompt()
+                .user(userPrompt)
                 .call()
                 .content();
 
